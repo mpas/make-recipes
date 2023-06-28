@@ -1,0 +1,31 @@
+.PHONY: all
+
+# - variables --------------------------------------------------------------------
+# the number of CPUS for the environment (default 2)
+CPU ?= 2
+
+# the memory allocated in GB (default 8)
+MEMORY ?= 8
+# - variables --------------------------------------------------------------------
+
+colima/help:
+	@echo "Colima"
+	@echo "	make colima/start			- start colima"
+	@echo "		param CPU			: the number of CPUs for the environment (default 2)"
+	@echo "		param MEMORY			: the memory allocated in GB (default 8)"
+	@echo "	make colima/stop			- stop colima"
+	@echo "	make colima/delete			- delete colima"
+	@echo "	make colima/reset			- stop, delete and start colima"
+	@echo "		param CPU			: the number of CPUs for the environment (default 2)"
+	@echo "		param MEMORY			: the memory allocated in GB (default 8)"
+
+colima/start:
+	@colima start --cpu $(CPU) --memory $(MEMORY) --profile colima-rancher --vm-type qemu
+
+colima/stop:
+	@colima stop --profile colima-rancher
+
+colima/delete:
+	@colima delete --profile colima-rancher
+
+colima/reset: colima/stop colima/delete colima/start

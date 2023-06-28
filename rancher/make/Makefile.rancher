@@ -1,0 +1,46 @@
+.PHONY: all
+
+# - variables --------------------------------------------------------------------
+CLUSTERNAME ?= "rancher"
+HOSTNAME ?= "localhost"
+PASSWORD ?= "Welcome123"
+# - variables --------------------------------------------------------------------
+
+rancher/help:
+	@echo "Rancher:"
+	@echo "	make rancher/install			- install Rancher"
+	@echo "		param CLUSTERNAME		: name of the cluster where rancher will be installed (default: 'rancher')"
+	@echo "		param HOSTNAME			: hostname where Rancher can be reached (https://...) (default: 'localhost')"
+	@echo "		param PASSWORD			: password used to login (default: 'Welcome123')"
+
+rancher/install:
+	@echo "- Installing and upgrading Helm charts"
+	@helm repo add rancher-latest https://releases.rancher.com/server-charts/latest
+	@helm repo add rancher-stable https://releases.rancher.com/server-charts/stable
+	@helm repo add jetstack https://charts.jetstack.io
+	@helm repo update
+
+	@echo "- Changing Kubectl context to $(CLUSTERNAME)"
+	@kubectl config use-context $(CLUSTERNAME)
+	@echo "- Installing cert-manager"
+	@helm install cert-manager jetstack/cert-manager \
+		--namespace cert-manager --create-namespace \
+		--version v1.11.1 \
+		--set installCRDs=true
+	@echo "-- Waiting for cert-manager to become ready"
+	@kubectl rollout status deployment cert-manager-webhook --namespace cert-manager --timeout=90s
+	
+	@echo "- Installing Rancher"
+	@echo "-- using CLUSTERNAME=$(CLUSTERNAME) / HOSTNAME=$(HOSTNAME)"
+	@helm install rancher rancher-stable/rancher \
+	--namespace cattle-system --create-namespace \
+	--set hostname="$(HOSTNAME)" \
+	--set global.cattle.psp.enabled=false \
+	--set bootstrapPassword="$(PASSWORD)" \
+	--set replicas=1 \
+	--debug
+	@echo "-- Waiting for Rancher to become ready"
+	@kubectl rollout status deployment rancher --namespace cattle-system --timeout=300s
+
+	@echo "- Installing Elemental Operator"
+	@helm upgrade --create-namespace -n cattle-elemental-system --install elemental-operator oci://registry.opensuse.org/isv/rancher/elemental/stable/charts/rancher/elemental-operator-chart

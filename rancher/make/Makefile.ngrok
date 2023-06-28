@@ -1,0 +1,53 @@
+.PHONY: all
+
+# - variables --------------------------------------------------------------------
+# the name of the env file generated (default: ngrok.env)
+ENV_FILE := ngrok.env
+# - variables --------------------------------------------------------------------
+
+ngrok/help:
+	@echo "Ngrok:"
+	@echo "	make ngrok/create-env-file 		- creates an env-file with the tunnels mentioned in the config"
+	@echo "	make ngrok/load-env-file		- loads the env-file and sets environment variables accordingly"
+	@echo "	make ngrok/remove-env-file 		- removes the env-file"
+	@echo "	make ngrok/print-env			- prints the contents of the env-file"
+	@echo "	make ngrok/start			- start Ngrok in background and retrieve Ngrok environment details"
+	@echo "	make ngrok/stop				- stop Ngrok"
+	@echo "	make ngrok/reset			- stop Ngrok, start in background and retrieve environment details"
+	@echo "	make ngrok/start-background		- start Ngrok in background"
+
+
+ngrok/create-env-file:
+	@echo "- Generating env file with tunnel information ... $(ENV_FILE)"
+	@curl -s http://localhost:4040/api/tunnels | jq -r '.tunnels[] | "\(.name | ascii_upcase)=\(.public_url)"' > $(ENV_FILE)
+	@echo "- Available tunnels"
+	@echo " -- Ngrok management UI: http://localhost:4040"
+	@curl -s http://localhost:4040/api/tunnels | jq -r '.tunnels[] | " -- \(.name | ascii_upcase)=\(.public_url)"' | sort
+
+ngrok/load-env-file:
+	@echo "- Loading env file ... $(ENV_FILE)"
+	@$(eval include $(ENV_FILE))	
+
+ngrok/remove-env-file:
+	@echo "- Removing env file ... $(ENV_FILE)"
+	@rm -rf $(ENV_FILE)
+
+ngrok/print-env:
+	@echo "- Available tunnels"
+	@echo " -- Ngrok management UI: http://localhost:4040"
+	@curl -s http://localhost:4040/api/tunnels | jq -r '.tunnels[] | " -- \(.name | ascii_upcase)=\(.public_url)"' | sort
+
+ngrok/start: ngrok/start-background ngrok/create-env-file ngrok/load-env-file
+	@echo "- Done"
+
+ngrok/stop:
+	@echo "- Stopping possible existing Ngrok instance"
+	@pkill ngrok || true
+	@$(MAKE) -s ngrok/remove-env-file
+
+ngrok/reset: ngrok/stop ngrok/start
+
+ngrok/start-background:
+	@echo "- Starting Ngrok in background"
+		@ngrok start --config ./ngrok/ngrok.yml --all --log=stdout > /dev/null &
+	@sleep 5

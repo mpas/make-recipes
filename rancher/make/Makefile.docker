@@ -1,0 +1,26 @@
+.PHONY: all
+
+# - variables --------------------------------------------------------------------
+# the port on which the registry will listen (default 5000)
+DOCKER_REGISTRY_PORT ?= 5000
+# - variables --------------------------------------------------------------------
+
+docker/help:
+	@echo "Docker"
+	@echo "	make docker/registry-start		- start local Docker registry"
+	@echo "		param DOCKER_REGISTRY_PORT	: the external port for which the Docker registry is listening (default 5000)"
+	@echo "	make docker/registry-stop		- stop Docker registry"
+	@echo "	make docker/registry-delete		- delete Docker registry"
+	@echo "	make docker/registry-reset		- stop, delete and start Docker registry"
+	@echo "		param DOCKER_REGISTRY_PORT	: the external port for which the Docker registry is listening (default 5000)"
+
+docker/registry-start:
+	docker run -d -p $(DOCKER_REGISTRY_PORT):5000 --restart=always --name registry registry:2
+
+docker/registry-stop:
+	@docker stop registry || true
+
+docker/registry-delete: 
+	@docker rm registry || true
+
+docker/registry-reset: docker/registry-stop docker/registry-delete docker/registry-start

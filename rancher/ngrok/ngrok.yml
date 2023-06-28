@@ -1,0 +1,9 @@
+version: "2"
+authtoken: <your ngrok token>
+tunnels:
+  rancher:
+    addr: 443
+    proto: http
+  registry:
+    addr: 5000
+    proto: http
